@@ -1,5 +1,9 @@
 # azd-dev-prod-appservice-storage
 
+Simple web application (Azure App Service and Azure Storage) with 2 different infrastructure configurations for dev and prod. 
+
+![Screenshot](./screenshot.png)
+
 Reference: https://learn.microsoft.com/azure/app-service/tutorial-networking-isolate-vnet
 
 ## Development Environment (`infra/`)
