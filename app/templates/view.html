@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View File: {{ filename }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .nav {
+            margin-bottom: 20px;
+        }
+        .nav a {
+            color: #0078d4;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .file-content {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .file-header {
+            margin-bottom: 20px;
+        }
+        .file-name {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .back-link {
+            margin-top: 20px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>File Viewer</h1>
+        
+        <div class="nav">
+            <a href="{{ url_for('index') }}">Upload</a>
+            <a href="{{ url_for('list_files') }}">View Files</a>
+        </div>
+        
+        <div class="file-header">
+            <div class="file-name">{{ filename }}</div>
+        </div>
+        
+        <div class="file-content">{{ content }}</div>
+        
+        <a href="{{ url_for('list_files') }}" class="back-link">Back to Files</a>
+    </div>
+</body>
+</html>

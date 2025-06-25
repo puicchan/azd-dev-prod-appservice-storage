@@ -1,0 +1,4 @@
+Flask==3.0.3
+gunicorn==22.0.0
+azure-storage-blob==12.24.1
+azure-identity==1.19.0
