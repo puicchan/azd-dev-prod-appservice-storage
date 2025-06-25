@@ -1,8 +1,8 @@
 # azd-dev-prod-appservice-storage
 
-## Development Environment (`infra/`)
+Reference: https://learn.microsoft.com/azure/app-service/tutorial-networking-isolate-vnet
 
-The development environment focuses on simplicity and ease of access for development workflows.
+## Development Environment (`infra/`)
 
 ```mermaid
 graph TB
@@ -65,8 +65,6 @@ graph TB
 - **Cost Optimized**: B2 App Service Plan suitable for development workloads
 
 ## Production Environment (`infra-prod/`)
-
-The production environment implements enterprise-grade security with private networking and zero public access to backend resources.
 
 ```mermaid
 graph TB
@@ -163,3 +161,5 @@ graph TB
 | **Networking** | Standard public endpoints | Private endpoints + VNet integration |
 | **DNS Resolution** | Public DNS | Private DNS zones |
 | **App Service Plan** | B2 | S1 |
+| **Log Analytics** | Public access from all networks | Public access from all networks (network isolation not implemented yet) |
+| **Application Insights** | Public access from all networks | Public access from all networks (network isolation not implemented yet) |
