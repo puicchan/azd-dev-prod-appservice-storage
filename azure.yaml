@@ -3,24 +3,10 @@
 name: dev-prod
 infra:
   module: main
-  path: infra-prod
+  path: infra-staged
   # path: infra-prod
 services:
   app:
     project: .
     host: appservice
     language: python
-
-# resources:
-#   app:
-#     type: host.appservice
-#     port: 80
-#     runtime:
-#       stack: python
-#       version: "3.13"
-#     uses:
-#       - storage
-#   storage:
-#     type: storage
-#     containers:
-#       - files
