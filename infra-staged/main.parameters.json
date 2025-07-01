@@ -8,6 +8,12 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
+      "primaryLocation": {
+        "value": "${AZURE_LOCATION}"
+      },
+      "secondaryLocation": {
+        "value": "${AZURE_SECONDARY_LOCATION}"
+      },
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
       },

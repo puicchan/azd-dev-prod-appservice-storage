@@ -1,12 +1,74 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# Multi-Region Scale Unit Configuration
+# This configuration deploys a highly available, multi-region scale unit
+# with Azure Front Door, regional App Services, and geo-replicated storage
 
-name: dev-prod
+name: multi-region-scale-unit
+metadata:
+  template: multi-region-app-service@0.0.1-beta
+
+# Infrastructure configuration for multi-region deployment
 infra:
-  module: main
+  module: main-scale-unit
   path: infra-staged
-  # path: infra-prod
+  location: "${AZURE_LOCATION}"
+  parameters:
+    primaryLocation: "${AZURE_LOCATION}"
+    secondaryLocation: "${AZURE_SECONDARY_LOCATION}"
+    envType: "${AZURE_ENV_TYPE}"
+
+# Application services
 services:
   app:
     project: .
     host: appservice
     language: python
+    
+# Environment-specific configurations
+environments:
+  # Development environment - simplified multi-region setup
+  dev:
+    values:
+      AZURE_LOCATION: "eastus"
+      AZURE_SECONDARY_LOCATION: "westus2"
+      AZURE_ENV_TYPE: "dev"
+      
+  # Production environment - full VNet integration and security
+  prod:
+    values:
+      AZURE_LOCATION: "eastus"
+      AZURE_SECONDARY_LOCATION: "westus2"
+      AZURE_ENV_TYPE: "prod"
+
+# Hooks for deployment lifecycle
+hooks:
+  predeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "Preparing multi-region deployment..."
+        echo "Primary Region: ${AZURE_PRIMARY_LOCATION:-East US}"
+        echo "Secondary Region: ${AZURE_SECONDARY_LOCATION:-West US 2}"
+        echo "Environment Type: ${AZURE_ENV_TYPE:-dev}"
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Preparing multi-region deployment..."
+        Write-Host "Primary Region: $($env:AZURE_PRIMARY_LOCATION ?? 'East US')"
+        Write-Host "Secondary Region: $($env:AZURE_SECONDARY_LOCATION ?? 'West US 2')"
+        Write-Host "Environment Type: $($env:AZURE_ENV_TYPE ?? 'dev')"
+        
+  postdeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "Multi-region deployment completed!"
+        echo "Front Door Endpoint: ${AZURE_FRONT_DOOR_ENDPOINT}"
+        echo "Primary App Service: ${AZURE_PRIMARY_APP_SERVICE}"
+        echo "Secondary App Service: ${AZURE_SECONDARY_APP_SERVICE}"
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Multi-region deployment completed!"
+        Write-Host "Front Door Endpoint: $env:AZURE_FRONT_DOOR_ENDPOINT"
+        Write-Host "Primary App Service: $env:AZURE_PRIMARY_APP_SERVICE"
+        Write-Host "Secondary App Service: $env:AZURE_SECONDARY_APP_SERVICE"

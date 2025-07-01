@@ -9,6 +9,14 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
+@minLength(1)
+@description('Primary location for all resources (alias for compatibility)')
+param primaryLocation string = location
+
+@minLength(1)
+@description('Secondary location for resources (for future multi-region support)')
+param secondaryLocation string = 'West US 2'
+
 @description('Environment type - determines networking configuration (dev/test/prod)')
 @allowed(['dev', 'test', 'prod'])
 param envType string = 'dev'

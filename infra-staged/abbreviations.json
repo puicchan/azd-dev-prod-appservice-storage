@@ -51,6 +51,7 @@
     "hdInsightClustersStorm": "storm-",
     "hybridComputeMachines": "arcs-",
     "insightsActionGroups": "ag-",
+    "insightsAutoscalesettings": "autoscale-",
     "insightsComponents": "appi-",
     "keyVaultVaults": "kv-",
     "kubernetesConnectedClusters": "arck",
