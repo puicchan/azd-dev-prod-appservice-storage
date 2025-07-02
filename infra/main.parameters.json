@@ -13,6 +13,9 @@
       },
       "principalType": {
         "value": "${AZURE_PRINCIPAL_TYPE}"
+      },
+      "envType": {
+        "value": "${AZURE_ENV_TYPE=dev}"
       }
     }
 }

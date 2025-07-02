@@ -3,7 +3,7 @@
 name: dev-prod
 infra:
   module: main
-  path: infra-staged
+  path: infra
   # path: infra-prod
 services:
   app:

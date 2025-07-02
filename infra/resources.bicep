@@ -1,77 +1,59 @@
+// Conditional Network Integration Implementation for environment-specific connectivity
+// This configuration deploys different networking patterns based on environment type:
+// 
+// PRODUCTION (envType = 'prod'):
+// 1. Virtual Network with two subnets:
+//    - vnet-integration-subnet: For App Service VNet integration (delegated to Microsoft.Web/serverfarms)
+//    - private-endpoint-subnet: For private endpoints to backend services
+// 2. Private DNS Zone for storage account resolution within the VNet
+// 3. Private endpoint for storage account (blocks public access)
+// 4. App Service with VNet integration enabled
+// 5. Storage account with public access disabled (only accessible via private endpoint)
+//
+// DEVELOPMENT (envType != 'prod'):
+// 1. No VNet integration - simplified connectivity
+// 2. Storage account with public access enabled (with network restrictions)
+// 3. App Service without VNet integration
+// 4. Managed identity still used for secure authentication
+//
+// Security Benefits (Production):
+// - All traffic between App Service and Storage Account flows through the private network
+// - Storage account is not accessible from the public internet
+// - DNS resolution for storage account happens through private DNS zone
+// - App Service can reach storage account using private IP addresses
+
 @description('The location used for all deployed resources')
 param location string = resourceGroup().location
 
 @description('Tags that will be applied to all resources')
 param tags object = {}
 
-@description('Id of the user or app to assign application roles')
-param principalId string
-
-@description('Principal type of user or app')
-param principalType string
+@description('Environment type - determines networking configuration')
+@allowed(['dev', 'test', 'prod'])
+param envType string = 'dev'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
+// Deploy network infrastructure only for production environments
+module network './network.bicep' = if (envType == 'prod') {
+  name: 'networkDeployment'
+  params: {
+    location: location
+    tags: tags
+    abbrs: abbrs
+    resourceToken: resourceToken
+  }
+}
+
 // Monitor application with Azure Monitor
-module monitoring 'br/public:avm/ptn/azd/monitoring:0.1.0' = {
-  name: 'monitoring'
+module monitoring './monitoring.bicep' = {
+  name: 'monitoringDeployment'
   params: {
-    logAnalyticsName: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
-    applicationInsightsName: '${abbrs.insightsComponents}${resourceToken}'
-    applicationInsightsDashboardName: '${abbrs.portalDashboards}${resourceToken}'
     location: location
     tags: tags
-  }
-}
-
-module appServicePlan 'br/public:avm/res/web/serverfarm:0.4.1' = {
-  name: 'appServicePlanDeployment'
-  params: {
-    name: '${abbrs.webServerFarms}${resourceToken}'
-    location: location
-    tags: tags
-    kind: 'linux'
-    skuCapacity: 1
-    skuName: 'B2'
-  }
-}
-
-var storageAccountName = '${abbrs.storageStorageAccounts}${resourceToken}'
-module storageAccount 'br/public:avm/res/storage/storage-account:0.17.2' = {
-  name: 'storageAccount'
-  params: {
-    name: storageAccountName
-    allowSharedKeyAccess: false
-    publicNetworkAccess: 'Enabled'
-    blobServices: {
-      containers: [
-        {
-          name: 'files'
-        }
-      ]
-    }
-    location: location
-    roleAssignments: concat(
-      principalType == 'User' ? [
-        {  
-          principalId: principalId
-          principalType: 'User'
-          roleDefinitionIdOrName: 'Storage Blob Data Contributor'  
-        }
-      ] : [],
-      [
-        {
-          principalId: appIdentity.outputs.principalId
-          principalType: 'ServicePrincipal'
-          roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-        }
-      ]
-    )
-    networkAcls: {
-      defaultAction: 'Allow'
-    }
-    tags: tags
+    abbrs: abbrs
+    resourceToken: resourceToken
   }
 }
 
@@ -83,58 +65,38 @@ module appIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   }
 }
 
-module app 'br/public:avm/res/web/site:0.15.1' = {
-  name: 'appServiceDeployment-app'
+// Shared services including storage account with environment-specific connectivity
+module shared './shared.bicep' = {
+  name: 'sharedDeployment'
   params: {
-    name: '${abbrs.webSitesAppService}app-${resourceToken}'
     location: location
-    tags: union(tags, { 'azd-service-name': 'app' })
-    kind: 'app,linux'
-    serverFarmResourceId: appServicePlan.outputs.resourceId
-    managedIdentities:{
-      systemAssigned: false
-      userAssignedResourceIds: [appIdentity.outputs.resourceId]
-    }
-    siteConfig: {
-      linuxFxVersion: 'python|3.13'
-      appCommandLine: ''
-      cors: {
-        allowedOrigins: [
-          'https://portal.azure.com'
-          'https://ms.portal.azure.com'
-        ]
-      }
-    }
-    clientAffinityEnabled: false
-    httpsOnly: true
-    appSettingsKeyValuePairs: {
-      AZURE_CLIENT_ID: appIdentity.outputs.clientId
-      AZURE_STORAGE_ACCOUNT_NAME: storageAccount.outputs.name
-      AZURE_STORAGE_BLOB_ENDPOINT: storageAccount.outputs.serviceEndpoints.blob
-      PORT: '80'
-      ENABLE_ORYX_BUILD: 'true'
-      PYTHON_ENABLE_GUNICORN_MULTIWORKERS: 'true'
-      SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
-    }
-    appInsightResourceId: monitoring.outputs.applicationInsightsResourceId
-    keyVaultAccessIdentityResourceId: appIdentity.outputs.resourceId
-    basicPublishingCredentialsPolicies: [
-      {
-        name: 'ftp'
-        allow: false
-      }
-      {
-        name: 'scm'
-        allow: false
-      }
-    ]
-    logsConfiguration: {
-      applicationLogs: { fileSystem: { level: 'Verbose' } }
-      detailedErrorMessages: { enabled: true }
-      failedRequestsTracing: { enabled: true }
-      httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
-    }
+    tags: tags
+    abbrs: abbrs
+    resourceToken: resourceToken
+    envType: envType
+    privateEndpointSubnetId: envType == 'prod' ? network.outputs.privateEndpointSubnetId : ''
+    privateDnsZoneStorageId: envType == 'prod' ? network.outputs.privateDnsZoneStorageId : ''
+    appIdentityPrincipalId: appIdentity.outputs.principalId
   }
 }
-output AZURE_RESOURCE_APP_ID string = app.outputs.resourceId
-output AZURE_RESOURCE_STORAGE_ID string = storageAccount.outputs.resourceId
+
+// Application hosting infrastructure
+module app './app.bicep' = {
+  name: 'appDeployment'
+  params: {
+    location: location
+    tags: tags
+    abbrs: abbrs
+    resourceToken: resourceToken
+    envType: envType
+    vnetIntegrationSubnetId: envType == 'prod' ? network.outputs.vnetIntegrationSubnetId : ''
+    applicationInsightsResourceId: monitoring.outputs.applicationInsightsResourceId
+    appIdentityResourceId: appIdentity.outputs.resourceId
+    appIdentityClientId: appIdentity.outputs.clientId
+    storageAccountName: shared.outputs.storageAccountName
+    storageAccountBlobEndpoint: shared.outputs.storageAccountBlobEndpoint
+  }
+}
+
+output AZURE_RESOURCE_APP_ID string = app.outputs.appServiceResourceId
+output AZURE_RESOURCE_STORAGE_ID string = shared.outputs.storageAccountId

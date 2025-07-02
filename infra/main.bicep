@@ -9,13 +9,19 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-
+@description('Environment type - determines networking configuration (dev/test/prod)')
+@allowed(['dev', 'test', 'prod'])
+param envType string = 'dev'
 
 @description('Id of the user or app to assign application roles')
-param principalId string
+param principalId string = ''
 
-@description('Principal type of user or app')
-param principalType string
+@description('Type of the user or app to assign application roles')
+@allowed(['User', 'ServicePrincipal'])
+param principalType string = 'User'
+
+// The principal parameters are available for role assignments if needed in the future
+// Currently, the application uses managed identity for secure access
 
 // Tags that should be applied to all resources.
 // 
@@ -24,6 +30,7 @@ param principalType string
 //   tags: union(tags, { 'azd-service-name': <service name in azure.yaml> })
 var tags = {
   'azd-env-name': environmentName
+  'environment-type': envType
 }
 
 // Organize resources in a resource group
@@ -39,8 +46,7 @@ module resources 'resources.bicep' = {
   params: {
     location: location
     tags: tags
-    principalId: principalId
-    principalType: principalType
+    envType: envType
   }
 }
 output AZURE_RESOURCE_APP_ID string = resources.outputs.AZURE_RESOURCE_APP_ID
