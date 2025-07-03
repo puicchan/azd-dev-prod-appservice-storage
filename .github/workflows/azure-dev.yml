@@ -51,4 +51,4 @@ jobs:
         run: |
           azd env set AZURE_ENV_NAME pc-layer72-prod
           azd env set AZURE_ENV_TYPE prod
-          azd deploy --no-prompt
+          azd up --no-prompt
