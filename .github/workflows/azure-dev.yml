@@ -50,4 +50,4 @@ jobs:
           AZURE_ENV_TYPE: prod
         run: |
           azd env set AZURE_ENV_TYPE prod --no-prompt
-          azd up --no-prompt
+          azd deploy --no-prompt
