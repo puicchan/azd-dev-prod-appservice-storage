@@ -49,5 +49,5 @@ jobs:
           AZURE_ENV_NAME: pc-layer72-prod
           AZURE_ENV_TYPE: prod
         run: |
-          azd env set AZURE_ENV_TYPE prod --no-prompt
+          azd env set AZURE_ENV_TYPE prod
           azd up --no-prompt
