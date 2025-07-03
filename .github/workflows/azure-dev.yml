@@ -41,8 +41,10 @@ jobs:
       - name: Provision Infrastructure
         run: azd provision --no-prompt
 
-      - name: Deploy Application
-        run: azd deploy --no-prompt
+      - name: Package and Deploy Application
+        run: |
+          azd package app
+          azd deploy --no-prompt
 
       - name: Promote to Production
         env:
@@ -50,12 +52,12 @@ jobs:
           AZURE_ENV_TYPE: prod
         run: |
           azd env set AZURE_ENV_TYPE prod --no-prompt
-          # Find the app package in the .azure directory
-          PACKAGE_PATH=$(find .azure -path "*/app/*" -name "*.zip" -type f | head -1)
-          if [ -z "$PACKAGE_PATH" ]; then
-            echo "Package not found, using standard location"
-            azd deploy app --from-package .azure/app --no-prompt
-          else
-            echo "Using package: $PACKAGE_PATH"
+          # Find the app package created by azd package
+          PACKAGE_PATH=$(find .azure -name "*.zip" -type f | grep -E "(app|dist)" | head -1)
+          if [ -n "$PACKAGE_PATH" ]; then
+            echo "Using existing package: $PACKAGE_PATH"
             azd deploy app --from-package "$PACKAGE_PATH" --no-prompt
+          else
+            echo "No package found, running full deployment"
+            azd deploy --no-prompt
           fi          
