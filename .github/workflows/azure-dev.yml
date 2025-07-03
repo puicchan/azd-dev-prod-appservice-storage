@@ -49,5 +49,15 @@ jobs:
           AZURE_ENV_NAME: pc-layer72-prod
           AZURE_ENV_TYPE: prod
         run: |
+#          azd env set AZURE_ENV_TYPE prod --no-prompt
+#          azd deploy --no-prompt
           azd env set AZURE_ENV_TYPE prod --no-prompt
-          azd deploy --no-prompt
+          # Find the app package in the .azure directory
+          PACKAGE_PATH=$(find .azure -path "*/app/*" -name "*.zip" -type f | head -1)
+          if [ -z "$PACKAGE_PATH" ]; then
+            echo "Package not found, using standard location"
+            azd deploy app --from-package .azure/app --no-prompt
+          else
+            echo "Using package: $PACKAGE_PATH"
+            azd deploy app --from-package "$PACKAGE_PATH" --no-prompt
+          fi
