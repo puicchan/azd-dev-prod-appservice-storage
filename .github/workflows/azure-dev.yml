@@ -43,4 +43,9 @@ jobs:
 
       - name: Deploy Application
         run: azd deploy --no-prompt
-        
+
+      - name: Promote to Production
+        run: |
+          azd env set AZURE_ENV_NAME pc-layer72-prod
+          azd env set AZURE_ENV_TYPE prod
+          azd deploy --no-prompt
