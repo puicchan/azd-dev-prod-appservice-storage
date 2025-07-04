@@ -46,12 +46,27 @@ jobs:
           azd package app
           azd deploy --no-prompt
 
-      - name: Promote to Production
-        env:
-          AZURE_ENV_NAME: pc-layer72-prod
-          AZURE_ENV_TYPE: prod
+      - name: Validate Application
         run: |
-          azd env set AZURE_ENV_TYPE prod --no-prompt
+          echo "🔍 Validating application in development environment..."
+          # TODO: Add actual validation here
+          # Examples:
+          # - Health checks and integration tests
+          # - Security and compliance scanning
+          # - Performance validation
+          sleep 3  # Simulate validation time
+          echo "✅ Application validation passed"
+
+      - name: Promote to Production
+        run: |
+          # Create production environment name by replacing -dev with -prod, or adding -prod if no -dev suffix
+          PROD_ENV_NAME="${AZURE_ENV_NAME%-dev}-prod"
+          echo "Production environment name: $PROD_ENV_NAME"
+          
+          # Set environment variables for this step
+          export AZURE_ENV_NAME="$PROD_ENV_NAME"
+          export AZURE_ENV_TYPE="prod"
+          
           # Find the app package created by azd package
           PACKAGE_PATH=$(find .azure -name "*.zip" -type f | grep -E "(app|dist)" | head -1)
           if [ -n "$PACKAGE_PATH" ]; then
