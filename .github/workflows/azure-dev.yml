@@ -67,8 +67,12 @@ jobs:
           export AZURE_ENV_NAME="$PROD_ENV_NAME"
           export AZURE_ENV_TYPE="prod"
           
-          # Find the app package created by azd package
-          PACKAGE_PATH=$(find .azure -name "*.zip" -type f | grep -E "(app|dist)" | head -1)
+          # Find the app package created by azd package (check both /tmp and .azure locations)
+          PACKAGE_PATH=$(find /tmp -name "*azddeploy*.zip" -type f 2>/dev/null | head -1)
+          if [ -z "$PACKAGE_PATH" ]; then
+            PACKAGE_PATH=$(find .azure -name "*.zip" -type f | grep -E "(app|dist)" | head -1)
+          fi
+          
           if [ -n "$PACKAGE_PATH" ]; then
             echo "Using existing package: $PACKAGE_PATH"
             azd deploy app --from-package "$PACKAGE_PATH" --no-prompt
