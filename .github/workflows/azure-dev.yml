@@ -43,9 +43,23 @@ jobs:
 
       - name: Package Application
         run: |
+          echo "Before creating dist directory:"
+          echo "Current working directory: $(pwd)"
+          ls -la
           mkdir -p ./dist
+          echo "After creating dist directory:"
+          ls -la ./dist/
           azd package app --output-path ./dist/app-package.zip
+          echo "After packaging:"
+          ls -la ./dist/
           echo "Package created at: ./dist/app-package.zip"
+          echo "Verifying package file exists:"
+          if [ -f "./dist/app-package.zip" ]; then
+            echo "✅ Package file confirmed: $(ls -la ./dist/app-package.zip)"
+            echo "✅ Full path: $(realpath ./dist/app-package.zip)"
+          else
+            echo "❌ Package file not found!"
+          fi
 
       - name: Deploy to Development
         run: azd deploy app --from-package ./dist/app-package.zip --no-prompt
