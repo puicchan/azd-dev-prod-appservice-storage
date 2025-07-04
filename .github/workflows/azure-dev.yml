@@ -43,40 +43,18 @@ jobs:
 
       - name: Package Application
         run: |
-          echo "Before creating dist directory:"
-          echo "Current working directory: $(pwd)"
-          ls -la
           mkdir -p ./dist
-          echo "After creating dist directory:"
-          ls -la ./dist/
           azd package app --output-path ./dist/app-package.zip
-          echo "After packaging:"
-          ls -la ./dist/
-          echo "Package created at: ./dist/app-package.zip"
-          echo "Verifying package file exists:"
-          if [ -f "./dist/app-package.zip" ]; then
-            echo "✅ Package file confirmed: $(ls -la ./dist/app-package.zip)"
-            echo "✅ Full path: $(realpath ./dist/app-package.zip)"
-            # Create a backup copy for production deployment
-            cp ./dist/app-package.zip ./app-package-backup.zip
-            echo "✅ Backup copy created: $(ls -la ./app-package-backup.zip)"
-          else
-            echo "❌ Package file not found!"
-          fi
+          # Create a backup copy for production deployment
+          cp ./dist/app-package.zip ./app-package-backup.zip
+          echo "✅ Application packaged and backup created"
 
       - name: Deploy to Development
-        run: |
-          echo "Before dev deployment - checking package still exists:"
-          ls -la ./dist/ || echo "dist directory not found"
-          azd deploy app --from-package ./dist/app-package.zip --no-prompt
-          echo "After dev deployment - checking package still exists:"
-          ls -la ./dist/ || echo "dist directory not found"
+        run: azd deploy app --from-package ./dist/app-package.zip --no-prompt
 
       - name: Validate Application
         run: |
           echo "🔍 Validating application in development environment..."
-          echo "Before validation - checking package still exists:"
-          ls -la ./dist/ || echo "dist directory not found"
           # TODO: Add actual validation here
           # Examples:
           # - Health checks and integration tests
@@ -84,18 +62,9 @@ jobs:
           # - Performance validation
           sleep 3  # Simulate validation time
           echo "✅ Application validation passed"
-          echo "After validation - checking package still exists:"
-          ls -la ./dist/ || echo "dist directory not found"
 
       - name: Promote to Production
         run: |
-          # Debug: Check current directory and list files
-          echo "Current working directory: $(pwd)"
-          echo "Contents of current directory:"
-          ls -la
-          echo "Contents of ./dist directory:"
-          ls -la ./dist/ || echo "dist directory not found"
-          
           # Create production environment name by replacing -dev with -prod, or adding -prod if no -dev suffix
           PROD_ENV_NAME="${AZURE_ENV_NAME%-dev}-prod"
           echo "Production environment name: $PROD_ENV_NAME"
@@ -113,11 +82,8 @@ jobs:
             echo "✅ Production deployment completed successfully"
             # Clean up the backup package after successful deployment
             rm -f "$PACKAGE_PATH"
-            echo "🧹 Cleaned up package backup: $PACKAGE_PATH"
+            echo "🧹 Cleaned up package backup"
           else
-            echo "❌ Package not found at $PACKAGE_PATH"
-            echo "Searching for any zip files in the workspace:"
-            find . -name "*.zip" -type f 2>/dev/null || echo "No zip files found"
-            echo "This should not happen - falling back to regular deployment"
+            echo "❌ Package backup not found - falling back to regular deployment"
             azd deploy --no-prompt
           fi          
