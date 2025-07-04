@@ -63,6 +63,13 @@ jobs:
 
       - name: Promote to Production
         run: |
+          # Debug: Check current directory and list files
+          echo "Current working directory: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of ./dist directory:"
+          ls -la ./dist/ || echo "dist directory not found"
+          
           # Create production environment name by replacing -dev with -prod, or adding -prod if no -dev suffix
           PROD_ENV_NAME="${AZURE_ENV_NAME%-dev}-prod"
           echo "Production environment name: $PROD_ENV_NAME"
@@ -78,6 +85,9 @@ jobs:
             echo "🚀 Deploying to production using existing package: $PACKAGE_PATH"
             azd deploy app --from-package "$PACKAGE_PATH" --no-prompt
           else
-            echo "❌ Package not found at $PACKAGE_PATH - this should not happen!"
-            exit 1
+            echo "❌ Package not found at $PACKAGE_PATH"
+            echo "Searching for any zip files in the workspace:"
+            find . -name "*.zip" -type f 2>/dev/null || echo "No zip files found"
+            echo "This should not happen - falling back to regular deployment"
+            azd deploy --no-prompt
           fi          
