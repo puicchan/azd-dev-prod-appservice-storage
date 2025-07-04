@@ -6,16 +6,24 @@ A simple web application demonstrating **environment-specific infrastructure** a
 
 ## 🚀 How It Works
 
-1. **Package Once**: Application is built and packaged during GitHub Actions
-2. **Deploy to Dev**: Deploy to development environment (public storage)
-3. **Validate**: Run tests and validation checks
-4. **Promote to Prod**: Deploy same package to production environment (private networking)
+The pipeline implements true **"build once, deploy everywhere"**:
+
+1. **Package Application**: Build and package the app to `./dist/app-package.zip`
+2. **Deploy to Dev**: Deploy the package to development environment (public storage)
+3. **Validate**: Run automated health checks and validation tests on dev deployment
+4. **Promote to Prod**: Deploy the **same package** to production environment (private networking)
 
 ### Pipeline Flow
 
 ```
-📦 Package and Deploy → 🔍 Validate Application → 🚀 Promote to Production
+📦 Package → 🚀 Deploy Dev → 🔍 Validate → 🚀 Promote to Prod (same package)
 ```
+
+**Key Benefits**:
+- ✅ Same exact package deployed to both environments
+- ✅ No rebuilding during promotion
+- ✅ Faster production deployments
+- ✅ Reduces build-related deployment issues
 
 **Smart Environment Naming**: `myapp-dev` automatically becomes `myapp-prod`
 
@@ -62,6 +70,16 @@ azd up
 
 **Development**: Public storage, managed identity, HTTPS-only  
 **Production**: Private networking, VNet integration, zero public storage access
+
+## 🧪 Validation & Testing
+
+The pipeline includes automated validation via `scripts/validate.py`:
+- ✅ Health checks and connectivity tests
+- ✅ Application functionality verification  
+- ✅ Azure Storage integration validation
+- ✅ Fails fast if issues are detected
+
+This ensures only validated code gets promoted to production.
 
 ## 📚 Learn More
 
