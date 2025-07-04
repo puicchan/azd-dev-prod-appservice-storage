@@ -57,16 +57,26 @@ jobs:
           if [ -f "./dist/app-package.zip" ]; then
             echo "✅ Package file confirmed: $(ls -la ./dist/app-package.zip)"
             echo "✅ Full path: $(realpath ./dist/app-package.zip)"
+            # Create a backup copy for production deployment
+            cp ./dist/app-package.zip ./app-package-backup.zip
+            echo "✅ Backup copy created: $(ls -la ./app-package-backup.zip)"
           else
             echo "❌ Package file not found!"
           fi
 
       - name: Deploy to Development
-        run: azd deploy app --from-package ./dist/app-package.zip --no-prompt
+        run: |
+          echo "Before dev deployment - checking package still exists:"
+          ls -la ./dist/ || echo "dist directory not found"
+          azd deploy app --from-package ./dist/app-package.zip --no-prompt
+          echo "After dev deployment - checking package still exists:"
+          ls -la ./dist/ || echo "dist directory not found"
 
       - name: Validate Application
         run: |
           echo "🔍 Validating application in development environment..."
+          echo "Before validation - checking package still exists:"
+          ls -la ./dist/ || echo "dist directory not found"
           # TODO: Add actual validation here
           # Examples:
           # - Health checks and integration tests
@@ -74,6 +84,8 @@ jobs:
           # - Performance validation
           sleep 3  # Simulate validation time
           echo "✅ Application validation passed"
+          echo "After validation - checking package still exists:"
+          ls -la ./dist/ || echo "dist directory not found"
 
       - name: Promote to Production
         run: |
@@ -93,11 +105,15 @@ jobs:
           export AZURE_ENV_TYPE="prod"
           
           # Use the same package created earlier - true "build once, deploy everywhere"
-          PACKAGE_PATH="./dist/app-package.zip"
+          PACKAGE_PATH="./app-package-backup.zip"
           
           if [ -f "$PACKAGE_PATH" ]; then
             echo "🚀 Deploying to production using existing package: $PACKAGE_PATH"
             azd deploy app --from-package "$PACKAGE_PATH" --no-prompt
+            echo "✅ Production deployment completed successfully"
+            # Clean up the backup package after successful deployment
+            rm -f "$PACKAGE_PATH"
+            echo "🧹 Cleaned up package backup: $PACKAGE_PATH"
           else
             echo "❌ Package not found at $PACKAGE_PATH"
             echo "Searching for any zip files in the workspace:"
