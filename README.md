@@ -49,22 +49,67 @@ Two environment configurations using Azure Bicep:
 
 ### Prerequisites
 - Azure subscription
-- GitHub repository with these variables set:
-  - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-  - `AZURE_ENV_NAME` (e.g., `myapp-dev`)
-  - `AZURE_LOCATION`, `AZURE_ENV_TYPE`
 
-### Deploy
+
+### 1. Initialize Project from Template
+
 ```bash
-# Manual deployment
-azd up
-
-# Or push to main branch for automated GitHub Actions deployment
+azd init -t https://github.com/puicchan/azd-dev-prod-appservice-storage
 ```
 
-### Environment Naming
-- Dev: `myapp-dev` → Prod: `myapp-prod`  
-- Dev: `staging` → Prod: `staging-prod`
+This downloads the complete implementation with all Bicep templates and enhanced GitHub Actions workflow.
+
+### 2. Set Up Development Environment
+
+```bash
+azd up
+```
+
+When prompted for the environment name, use `myproj-dev` (or your preferred naming pattern with `-dev` suffix).
+
+**Note**: The default `envType` is `dev`, so you don't need to set the `AZURE_ENV_TYPE` environment variable for development. The infrastructure will automatically provision with public access and cost-optimized resources.
+
+### 3. Set Up Production Environment
+
+Create and configure the production environment:
+
+```bash
+# Create new production environment
+azd env new myproj-prod
+
+# Set environment type to production
+azd env set AZURE_ENV_TYPE prod
+
+# Deploy production environment
+azd up
+```
+
+This provisions production infrastructure with VNet integration, private endpoints, and enhanced security.
+
+### 4. Switch Back to Development Environment
+
+```bash
+azd env select myproj-dev
+```
+
+You're now ready to develop and test in the development environment.
+
+### 5. Make Code Changes
+
+Edit your application code (e.g., modify `app/templates/index.html` or `app.py`) to test the promotion workflow.
+
+### 6. Configure CI/CD Pipeline
+
+```bash
+azd pipeline config
+```
+
+This enhances the generated GitHub Actions workflow with dev-to-prod promotion logic. The pipeline will:
+- Deploy and validate in development (`myproj-dev`)
+- Automatically promote to production (`myproj-prod`) using the same package
+- Handle environment naming conversion automatically
+
+Once configured, every push to the main branch will trigger the automated dev-to-prod promotion pipeline!
 
 ## 🛡️ Security & Features
 
