@@ -1,0 +1,216 @@
+trigger:
+  branches:
+    include:
+    - main
+
+variables:
+- name: AZURE_ENV_TYPE
+  value: 'dev'
+
+stages:
+- stage: Build
+  displayName: 'Build and Provision Infrastructure'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Application Package'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Bash@3
+      displayName: Install azd
+      inputs:
+        targetType: 'inline'
+        script: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+    
+    - task: PowerShell@2
+      displayName: Configure AZD to Use AZ CLI Authentication
+      inputs:
+        targetType: inline
+        script: |
+          azd config set auth.useAzCliAuth "true"
+        pwsh: true
+    
+    - task: AzureCLI@2
+      displayName: Provision Infrastructure
+      inputs:
+        azureSubscription: azconnection
+        scriptType: bash
+        scriptLocation: inlineScript
+        keepAzSessionActive: true
+        inlineScript: |
+          azd provision --no-prompt
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
+        AZURE_LOCATION: $(AZURE_LOCATION)
+    
+    - task: AzureCLI@2
+      displayName: Package Application
+      inputs:
+        azureSubscription: azconnection
+        scriptType: bash
+        scriptLocation: inlineScript
+        keepAzSessionActive: true
+        inlineScript: |
+          mkdir -p ./dist
+          azd package app --output-path ./dist/app-package.zip
+          echo "✅ Application packaged successfully"
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
+        AZURE_LOCATION: $(AZURE_LOCATION)
+    
+    - task: PublishPipelineArtifact@1
+      displayName: Upload Package Artifact
+      inputs:
+        targetPath: './dist/app-package.zip'
+        artifact: 'app-package'
+        publishLocation: 'pipeline'
+- stage: DeployDev
+  displayName: 'Deploy to Development'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: DeployDevJob
+    displayName: 'Deploy and Validate in Development'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download Package Artifact
+      inputs:
+        buildType: 'current'
+        artifactName: 'app-package'
+        targetPath: './artifacts'
+    
+    - task: Bash@3
+      displayName: Install azd
+      inputs:
+        targetType: 'inline'
+        script: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+    
+    - task: PowerShell@2
+      displayName: Configure AZD to Use AZ CLI Authentication
+      inputs:
+        targetType: inline
+        script: |
+          azd config set auth.useAzCliAuth "true"
+        pwsh: true
+    
+    - task: AzureCLI@2
+      displayName: Deploy to Development
+      inputs:
+        azureSubscription: azconnection
+        scriptType: bash
+        scriptLocation: inlineScript
+        keepAzSessionActive: true
+        inlineScript: |
+          azd deploy app --from-package ./artifacts/app-package.zip --no-prompt
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
+        AZURE_LOCATION: $(AZURE_LOCATION)
+        AZURE_ENV_TYPE: $(AZURE_ENV_TYPE)
+    
+    - task: AzureCLI@2
+      displayName: Validate Application
+      inputs:
+        azureSubscription: azconnection
+        scriptType: bash
+        scriptLocation: inlineScript
+        keepAzSessionActive: true
+        inlineScript: |
+          echo "🔍 Validating application in development environment..."
+          # TODO: Add actual validation here
+          # Examples:
+          # - Health checks and integration tests
+          # - Security and compliance scanning
+          # - Performance validation
+          sleep 3  # Simulate validation time
+          echo "✅ Application validation passed"
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
+        AZURE_LOCATION: $(AZURE_LOCATION)
+
+- stage: DeployProd
+  displayName: 'Deploy to Production'
+  dependsOn: DeployDev
+  condition: succeeded()
+  jobs:
+  - job: DeployProdJob
+    displayName: 'Deploy to Production Environment'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download Package Artifact
+      inputs:
+        buildType: 'current'
+        artifactName: 'app-package'
+        targetPath: './artifacts'
+    
+    - task: Bash@3
+      displayName: Install azd
+      inputs:
+        targetType: 'inline'
+        script: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+    
+    - task: PowerShell@2
+      displayName: Configure AZD to Use AZ CLI Authentication
+      inputs:
+        targetType: inline
+        script: |
+          azd config set auth.useAzCliAuth "true"
+        pwsh: true
+    
+    - task: AzureCLI@2
+      displayName: Promote to Production
+      inputs:
+        azureSubscription: azconnection
+        scriptType: bash
+        scriptLocation: inlineScript
+        keepAzSessionActive: true
+        inlineScript: |
+          # Create production environment name by replacing -dev with -prod, or adding -prod if no-dev suffix
+          PROD_ENV_NAME="${AZURE_ENV_NAME%-dev}-prod"
+          echo "Production environment name: $PROD_ENV_NAME"
+
+          # Create the production environment if it doesn't exist, or select it if it does
+          if azd env list | grep -q "$PROD_ENV_NAME"; then
+            echo "Production environment exists, selecting it..."
+            azd env select "$PROD_ENV_NAME" --no-prompt
+          else
+            echo "Production environment doesn't exist, creating it..."
+            azd env new "$PROD_ENV_NAME" --no-prompt
+          fi
+
+          # Refresh/recreate the production environment configuration
+          echo "🔄 Refreshing production environment configuration: $PROD_ENV_NAME"
+          azd env refresh -e "$PROD_ENV_NAME" --no-prompt
+
+          # Set production-specific environment variables
+          echo "🔧 Setting production environment variables..."
+          azd env set AZURE_ENV_NAME "$PROD_ENV_NAME" --no-prompt
+          azd env set AZURE_LOCATION "$AZURE_LOCATION" --no-prompt
+          azd env set AZURE_SUBSCRIPTION_ID "$AZURE_SUBSCRIPTION_ID" --no-prompt
+
+          # Use the downloaded package artifact - true "build once, deploy everywhere"
+          PACKAGE_PATH="./artifacts/app-package.zip"
+
+          if [ -f "$PACKAGE_PATH" ]; then
+            echo "🚀 Deploying to production using downloaded package artifact: $PACKAGE_PATH"
+            azd deploy app --from-package "$PACKAGE_PATH" -e "$PROD_ENV_NAME" --no-prompt
+            echo "✅ Production deployment completed successfully"
+          else
+            echo "❌ Package artifact not found - falling back to regular deployment"
+            azd deploy -e "$PROD_ENV_NAME" --no-prompt
+          fi
+      env:
+        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
+        AZURE_LOCATION: $(AZURE_LOCATION)
+        AZURE_ENV_TYPE: 'prod'
