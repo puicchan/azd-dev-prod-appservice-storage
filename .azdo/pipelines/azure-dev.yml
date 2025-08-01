@@ -34,7 +34,7 @@ stages:
         keepAzSessionActive: true
         inlineScript: |
           mkdir -p ./dist
-          azd package app --output-path ./dist/app-package.zip
+          azd package app --output-path ./dist/app-package.zip  --no-prompt
           echo "✅ Application packaged successfully"
       env:
         AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
