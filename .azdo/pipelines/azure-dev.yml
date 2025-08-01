@@ -6,9 +6,9 @@ pool:
   vmImage: ubuntu-latest
 
 stages:
-- stage: build and test
+- stage: build_and_test
   jobs:
-  - job: build and package
+  - job: buildAndPackage
     pool:
       vmImage: ubuntu-latest
     steps:
@@ -47,18 +47,18 @@ stages:
         artifact: 'app-package'
         publishLocation: 'pipeline'
 
-- stage: deploy development
-  dependsOn: build and test
+- stage: deploy_development
+  variables:
+    PROD_ENV_NAME: $(AZURE_ENV_NAME)
+    AZURE_ENV_TYPE: $(AZURE_ENV_TYPE)
+    AZURE_LOCATION: $(AZURE_LOCATION)
+    AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+
+  dependsOn: build_and_test
   jobs:
-  - job: deploy development
+  - job: deployAndDevelopment
     pool:
       vmImage: ubuntu-latest
-    env:
-      PROD_ENV_NAME: $(AZURE_ENV_NAME)
-      AZURE_ENV_TYPE: $(AZURE_ENV_TYPE)
-      AZURE_LOCATION: $(AZURE_LOCATION)
-      AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-
     steps:
     - task: Bash@3
       displayName: Install azd
@@ -101,17 +101,17 @@ stages:
         inlineScript: |
           azd deploy app --from-package ./artifacts/app-package.zip --no-prompt
 
-- stage: promote to Prod
-  dependsOn: deploy development
+- stage: promote_to_Prod
+  variables:
+    PROD_ENV_NAME: $(AZURE_PROD_ENV_NAME)
+    AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
+    AZURE_LOCATION: $(AZURE_PROD_LOCATION)
+    AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
+  dependsOn: deploy_development
   jobs:
-  - job: deploy production
+  - job: deployProduction
     pool:
       vmImage: ubuntu-latest
-    env:
-      PROD_ENV_NAME: $(AZURE_PROD_ENV_NAME)
-      AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
-      AZURE_LOCATION: $(AZURE_PROD_LOCATION)
-      AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
     steps:
     - task: Bash@3
       displayName: Install azd
