@@ -10,3 +10,9 @@ services:
     project: .
     host: appservice
     language: python
+pipeline:
+  variables:
+    - AZURE_PROD_ENV_NAME
+    - AZURE_PROD_ENV_TYPE
+    - AZURE_PROD_LOCATION
+    - AZURE_PROD_SUBSCRIPTION_ID
