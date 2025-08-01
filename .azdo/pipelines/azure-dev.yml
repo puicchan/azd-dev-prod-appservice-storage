@@ -36,10 +36,6 @@ stages:
           mkdir -p ./dist
           azd package app --output-path ./dist/app-package.zip  --no-prompt
           echo "✅ Application packaged successfully"
-      env:
-        AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-        AZURE_ENV_NAME: $(AZURE_ENV_NAME)
-        AZURE_LOCATION: $(AZURE_LOCATION)
     - task: PublishPipelineArtifact@1
       displayName: Upload Package Artifact
       inputs:
@@ -48,12 +44,6 @@ stages:
         publishLocation: 'pipeline'
 
 - stage: deploy_development
-  variables:
-    PROD_ENV_NAME: $(AZURE_ENV_NAME)
-    AZURE_ENV_TYPE: $(AZURE_ENV_TYPE)
-    AZURE_LOCATION: $(AZURE_LOCATION)
-    AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-
   dependsOn: build_and_test
   jobs:
   - job: deployAndDevelopment
@@ -102,11 +92,6 @@ stages:
           azd deploy app --from-package ./artifacts/app-package.zip --no-prompt
 
 - stage: promote_to_Prod
-  variables:
-    PROD_ENV_NAME: $(AZURE_PROD_ENV_NAME)
-    AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
-    AZURE_LOCATION: $(AZURE_PROD_LOCATION)
-    AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
   dependsOn: deploy_development
   jobs:
   - job: deployProduction
@@ -135,6 +120,12 @@ stages:
         keepAzSessionActive: true
         inlineScript: |
           azd provision --no-prompt
+      # use prod settings to override environment variables
+      env:
+        AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
+        AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
+        AZURE_LOCATION: $(AZURE_PROD_LOCATION)
+        AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
 
     - task: DownloadPipelineArtifact@2
       displayName: Download Package Artifact
@@ -152,4 +143,10 @@ stages:
         keepAzSessionActive: true
         inlineScript: |
           azd deploy app --from-package ./artifacts/app-package.zip --no-prompt
+      # use prod settings to override environment variables
+      env:
+        AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
+        AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
+        AZURE_LOCATION: $(AZURE_PROD_LOCATION)
+        AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)          
 
