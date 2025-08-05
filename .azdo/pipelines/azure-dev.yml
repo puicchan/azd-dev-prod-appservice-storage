@@ -72,8 +72,6 @@ stages:
         scriptLocation: inlineScript
         keepAzSessionActive: true
         inlineScript: |
-          echo "AZURE_PROD_ENV_NAME is $AZURE_PROD_ENV_NAME"
-          echo "AZURE_ENV_NAME is $AZURE_ENV_NAME"
           azd provision --no-prompt
       env:
         AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
@@ -99,6 +97,13 @@ stages:
   dependsOn: deploy_development
   jobs:
   - job: deployProduction
+    # use prod settings to override default environment variables
+    # this variables become ENV VARS for all tasks in this job
+    variables:
+      AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
+      AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
+      AZURE_LOCATION: $(AZURE_PROD_LOCATION)
+      AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
     pool:
       vmImage: ubuntu-latest
     steps:
@@ -124,12 +129,6 @@ stages:
         keepAzSessionActive: true
         inlineScript: |
           azd provision --no-prompt
-      # use prod settings to override environment variables
-      env:
-        AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
-        AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
-        AZURE_LOCATION: $(AZURE_PROD_LOCATION)
-        AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)
 
     - task: DownloadPipelineArtifact@2
       displayName: Download Package Artifact
@@ -147,10 +146,3 @@ stages:
         keepAzSessionActive: true
         inlineScript: |
           azd deploy app --from-package ./artifacts/app-package.zip --no-prompt
-      # use prod settings to override environment variables
-      env:
-        AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
-        AZURE_ENV_TYPE: $(AZURE_PROD_ENV_TYPE)
-        AZURE_LOCATION: $(AZURE_PROD_LOCATION)
-        AZURE_SUBSCRIPTION_ID: $(AZURE_PROD_SUBSCRIPTION_ID)          
-
