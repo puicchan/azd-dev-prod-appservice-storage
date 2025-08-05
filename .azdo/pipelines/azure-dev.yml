@@ -72,7 +72,11 @@ stages:
         scriptLocation: inlineScript
         keepAzSessionActive: true
         inlineScript: |
+          echo "AZURE_PROD_ENV_NAME is $AZURE_PROD_ENV_NAME"
+          echo "AZURE_ENV_NAME is $AZURE_ENV_NAME"
           azd provision --no-prompt
+      env:
+        AZURE_ENV_NAME: $(AZURE_PROD_ENV_NAME)
     
     - task: DownloadPipelineArtifact@2
       displayName: Download Package Artifact
